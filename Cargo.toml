@@ -1,8 +1,6 @@
 [workspace]
+members = [
+    "crates/server"
+]
 
-[package]
-name = "csync"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
+resolver = "3"
