@@ -1,9 +1,10 @@
 use core::panic;
 use std::env;
 
-use server::hash::compute_hashes_for_file;
+use server::{hash::compute_hashes_for_file, storage::init_filesystem};
 
 fn main() {
+    init_filesystem();
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
         panic!("Expected there to be 1 args (path)");
