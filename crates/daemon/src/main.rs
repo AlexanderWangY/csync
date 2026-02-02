@@ -1,20 +1,22 @@
 use core::panic;
 use std::env;
 
-use server::{hash::compute_hashes_for_file, storage::init_filesystem};
+use common::{hash::chunk_and_hash_file, storage::init_filesystem};
 
 fn main() {
-    init_filesystem();
+    if let Err(s) = init_filesystem() {
+        panic!("{s}");
+    }
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
         panic!("Expected there to be 1 args (path)");
     }
 
     let path = args.get(1).unwrap();
-    let hashes = compute_hashes_for_file(path).unwrap();
+    let hashes = chunk_and_hash_file(path).unwrap();
 
     for hash in &hashes {
-        println!("{}", hash);
+        println!("{:x?}", hash);
     }
 
     println!("Hashes for {}", path);
