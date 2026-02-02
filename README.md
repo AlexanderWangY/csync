@@ -29,7 +29,7 @@ Again, these commands and usages are *planned* to be built. Not done yet.
 
 Start server (Not done)
 ```
-  csyncd start --port 8080 # Our default port is 80085
+  csyncd start --port 8080 # Our default port is 43690
 ```
 
 
