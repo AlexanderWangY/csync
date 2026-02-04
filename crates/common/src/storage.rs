@@ -150,3 +150,23 @@ impl Storage {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use tempfile::tempdir;
+
+    use super::*;
+
+    #[test]
+    fn create_basic() {
+        let temp = tempdir().unwrap();
+        let storage = Storage::with_root(temp.path().join(".csync")).unwrap();
+
+        let expected_root = temp.path().join(".csync");
+        let expected_objects = expected_root.join("objects");
+        let expected_manifests = expected_root.join("manifests");
+        assert_eq!(expected_root, storage.root);
+        assert_eq!(expected_objects, storage.objects_dir());
+        assert_eq!(expected_manifests, storage.manifests_dir());
+    }
+}
