@@ -165,8 +165,41 @@ mod tests {
         let expected_root = temp.path().join(".csync");
         let expected_objects = expected_root.join("objects");
         let expected_manifests = expected_root.join("manifests");
+        let expected_config = expected_root.join("config.toml");
         assert_eq!(expected_root, storage.root);
         assert_eq!(expected_objects, storage.objects_dir());
         assert_eq!(expected_manifests, storage.manifests_dir());
+        assert_eq!(expected_config, storage.config_path());
+    }
+
+    #[test]
+    fn write_bytes() {
+        let temp = tempdir().unwrap();
+        let storage = Storage::with_root(temp.path().join(".csync")).unwrap();
+
+        let test_string = "Hello, world!";
+
+        let mut file_path = storage.objects_dir();
+        file_path.push("test.txt");
+
+        storage
+            .atomic_write(&file_path, test_string.as_bytes())
+            .unwrap();
+
+        // Read from file and compare
+        let bytes: Vec<u8> = fs::read(file_path).unwrap();
+        assert_eq!(test_string, String::from_utf8(bytes).unwrap());
+    }
+
+    #[test]
+    fn invalid_path() {
+        let temp = tempdir().unwrap();
+        let storage = Storage::with_root(temp.path().join(".csync")).unwrap();
+
+        let bad_path = storage.root.join("objects/../bad.txt");
+
+        let err = storage.atomic_write(&bad_path, b"Randomstuff").unwrap_err();
+
+        assert!(matches!(err, StorageError::InvalidFileLocation));
     }
 }
