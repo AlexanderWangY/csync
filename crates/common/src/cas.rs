@@ -35,6 +35,19 @@ impl Cas {
         Self { storage }
     }
 
+    // Check if object exists
+    pub fn exists(&self, hash: &[u8]) -> bool {
+        let objects_dir = self.storage.objects_dir();
+
+        let shard1 = format!("{:02x}", hash[0]);
+        let shard2 = format!("{:02x}", hash[1]);
+        let object_name = hex::encode(hash);
+
+        let shard_path = objects_dir.join(shard1).join(shard2).join(object_name);
+
+        shard_path.exists()
+    }
+
     pub fn put_object(&self, hash: &[u8; 32], data: &[u8]) -> Result<(), CasError> {
         // Crawl through 2 layer data layer
         // 1) Layer 1 doesnt exist, please create
@@ -46,13 +59,13 @@ impl Cas {
         // Formats first 2 bytes of hash to hex representation
         let shard1 = format!("{:02x}", hash[0]);
         let shard2 = format!("{:02x}", hash[1]);
-        let object_name = hex::encode(data);
+        let object_name = hex::encode(hash);
 
         // Build object store shard path
         let shard_dir = objects_dir.join(shard1).join(shard2);
         let shard_object_path = shard_dir.join(object_name);
 
-        // If already exists, do NOT write
+        // In CAS, don't create the file if it already exists.
         if shard_object_path.exists() {
             return Ok(());
         }
@@ -62,5 +75,9 @@ impl Cas {
         Ok(())
     }
 
-    pub fn get_object(&self, hash: &[u8; 32]) {}
+    pub fn get_object(&self, hash: &[u8; 32]) {
+        if !self.exists(hash) {
+            // Should return error here
+        }
+    }
 }
