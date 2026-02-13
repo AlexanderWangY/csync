@@ -13,6 +13,7 @@ pub enum StorageError {
     NoHomeDir,
     PathOutsideRoot,
     InvalidFileLocation,
+    FileDoesNotExist,
     IoError(io::Error),
 }
 
@@ -23,6 +24,7 @@ impl Display for StorageError {
             Self::NoHomeDir => write!(f, "Could not find home directory"),
             Self::PathOutsideRoot => write!(f, "Attempted to write outside of storage root"),
             Self::InvalidFileLocation => write!(f, "Invalid file path or filename"),
+            Self::FileDoesNotExist => write!(f, "File does not exist"),
             Self::IoError(e) => write!(f, "I/O Error: {}", e),
         }
     }
@@ -89,6 +91,41 @@ impl Storage {
 
     pub fn config_path(&self) -> PathBuf {
         self.root.join("config.toml")
+    }
+
+    /// Checks whether a given path is within root
+    /// Useful for ensuring operations stay within the set root
+    fn within_root(&self, path: &Path) -> Result<bool, StorageError> {
+        let root = self.root.canonicalize().map_err(StorageError::IoError)?;
+        let candidate = path.canonicalize().map_err(StorageError::IoError)?;
+
+        Ok(candidate.starts_with(root))
+    }
+
+    pub fn read_blob(&self, path: &Path) -> Result<Vec<u8>, StorageError> {
+        // This function does the following
+        // 1) Ensures path is within the root
+        // 2) Ensure file exists
+        // 3) Returns file content in bytes
+
+        if path
+            .components()
+            .any(|c| matches!(c, std::path::Component::ParentDir))
+        {
+            return Err(StorageError::InvalidFileLocation);
+        }
+
+        if !self.within_root(path)? {
+            return Err(StorageError::InvalidFileLocation);
+        }
+
+        if !path.exists() || path.is_dir() {
+            return Err(StorageError::FileDoesNotExist);
+        }
+
+        let bytes: Vec<u8> = fs::read(path).map_err(StorageError::IoError)?;
+
+        Ok(bytes)
     }
 
     /// Atomically writes `bytes` to the specified `path`.

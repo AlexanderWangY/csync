@@ -1,10 +1,18 @@
-use std::{fs, sync::Arc};
+use std::{
+    fs,
+    path::{self, Path, PathBuf},
+    sync::Arc,
+};
 
-use crate::storage::{Storage, StorageError};
+use crate::{
+    chunk::Chunk,
+    storage::{Storage, StorageError},
+};
 
 #[derive(Debug)]
 pub enum CasError {
     StorageErr(StorageError),
+    ObjectNotFound,
     Unknown,
 }
 
@@ -35,17 +43,19 @@ impl Cas {
         Self { storage }
     }
 
-    // Check if object exists
-    pub fn exists(&self, hash: &[u8]) -> bool {
+    fn construct_hash_path(&self, hash: &[u8; 32]) -> PathBuf {
         let objects_dir = self.storage.objects_dir();
 
         let shard1 = format!("{:02x}", hash[0]);
         let shard2 = format!("{:02x}", hash[1]);
         let object_name = hex::encode(hash);
 
-        let shard_path = objects_dir.join(shard1).join(shard2).join(object_name);
+        objects_dir.join(shard1).join(shard2).join(object_name)
+    }
 
-        shard_path.exists()
+    // Check if object exists
+    pub fn object_exists(&self, hash: &[u8; 32]) -> bool {
+        self.construct_hash_path(hash).exists()
     }
 
     pub fn put_object(&self, hash: &[u8; 32], data: &[u8]) -> Result<(), CasError> {
@@ -75,9 +85,21 @@ impl Cas {
         Ok(())
     }
 
-    pub fn get_object(&self, hash: &[u8; 32]) {
-        if !self.exists(hash) {
-            // Should return error here
+    pub fn get_object(&self, hash: &[u8; 32]) -> Result<Chunk, CasError> {
+        if !self.object_exists(hash) {
+            return Err(CasError::ObjectNotFound);
         }
+
+        let path = self.construct_hash_path(hash);
+
+        let bytes = self
+            .storage
+            .read_blob(&path)
+            .map_err(CasError::StorageErr)?;
+
+        Ok(Chunk {
+            hash: *hash,
+            data: bytes,
+        })
     }
 }
